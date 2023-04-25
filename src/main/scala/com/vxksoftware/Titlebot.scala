@@ -49,12 +49,8 @@ object Titlebot extends ZIOAppDefault:
 
   val backend: ZIO[TitleInfoFetcher & Server, IOException, Unit] =
     for
-      _           <- Console.printLine("Starting server...")
-      serverFiber <- Server.serve(routes.withDefaultErrorResponse).fork
-      _           <- Console.printLine("Server started on port 8080")
-      _           <- Console.readLine
-      _           <- Console.printLine("Shutting down server...")
-      _           <- serverFiber.interrupt
+      _ <- Console.printLine("Starting server on port 8080...")
+      _ <- Server.serve(routes.withDefaultErrorResponse)
     yield ()
 
   val run =
