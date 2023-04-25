@@ -2,8 +2,8 @@
 
 ---
 #### To run:
-- `sbt clean docker:stage`
-- `docker-compose up`
+1. `sbt clean docker:stage`
+2. `docker-compose up`
 
 #### To test:
 - `sbt test`
@@ -11,7 +11,7 @@
 ---
 #### TODO:
 - [ ] stream html string until the title is read - no need to read the whole doc
-- [ ] caching
+- [x] caching
 - [ ] serve icons from backend
 - [ ] add more logging
 

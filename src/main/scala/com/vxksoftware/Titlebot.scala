@@ -1,7 +1,7 @@
 package com.vxksoftware
 
 import com.vxksoftware.model.{InvalidRequestException, InvalidUrlException, TitlebotRequest, TitlebotResponse}
-import com.vxksoftware.service.TitleInfoFetcher
+import com.vxksoftware.service.{Cache, TitleInfoFetcher}
 import zio.*
 import zio.http.*
 import zio.http.Header.{AccessControlAllowMethods, AccessControlAllowOrigin, Origin}
@@ -47,14 +47,34 @@ object Titlebot extends ZIOAppDefault:
       }
   } @@ RequestHandlerMiddlewares.debug @@ cors(corsConfig)
 
-  val backend: ZIO[TitleInfoFetcher & Server, IOException, Unit] =
+  val backendLive: ZIO[TitleInfoFetcher with Server, IOException, Unit] = for
+    _ <- Console.printLine("Starting server on port 8080...")
+    _ <- Server.serve(routes.withDefaultErrorResponse)
+  yield ()
+
+  val backendDev: ZIO[TitleInfoFetcher with Server, Throwable, Unit] = for
+    _           <- Console.printLine("Starting development server on port 8080...")
+    serverFiber <- Server.serve(routes.withDefaultErrorResponse).fork
+    _           <- Console.readLine
+    _           <- Console.printLine("Shutting down server...")
+    _           <- serverFiber.interrupt
+  yield ()
+
+  val backend: ZIO[TitleInfoFetcher & Server, Throwable, ExitCode] =
     for
-      _ <- Console.printLine("Starting server on port 8080...")
-      _ <- Server.serve(routes.withDefaultErrorResponse)
-    yield ()
+      environment <- System.envOrElse("ENV", "development")
+      _ <- environment match {
+             case "production" => backendLive
+             case _            => backendDev
+           }
+    yield ExitCode.success
 
   val run =
-    backend.provide(
-      Server.default,
-      TitleInfoFetcher.live
-    )
+    for
+      cache <- Cache.make[URL, TitlebotResponse]
+      _ <- backend.provide(
+             Server.default,
+             TitleInfoFetcher.live,
+             ZLayer.succeed(cache)
+           )
+    yield ()

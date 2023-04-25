@@ -17,7 +17,7 @@ libraryDependencies := Seq(
 
 testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
 
-Compile / mainClass    := Some("com.vxksoftware.Titlebot")
+//Compile / mainClass    := Some("com.vxksoftware.Titlebot")
 dockerExposedPorts     := Seq(8080)
 Docker / daemonUserUid := None
 Docker / daemonUser    := "daemon"
