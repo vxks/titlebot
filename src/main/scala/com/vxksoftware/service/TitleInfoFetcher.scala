@@ -1,6 +1,6 @@
 package com.vxksoftware.service
 
-import com.vxksoftware.model.{InvalidUrlException, TitlebotResponse}
+import com.vxksoftware.model.{NonexistentUrlException, TitlebotResponse}
 import com.vxksoftware.service.TitleInfoFetcher
 import zio.*
 import zio.http.{URL as ZURL, *}
@@ -32,7 +32,7 @@ object TitleInfoFetcher:
         // don't really need the whole text - could only read the needed bytes
         // https://github.com/com-lihaoyi/requests-scala#streaming-requests
         val response = Try(requests.get(url.toString).text()).fold( // ZIO.attempt
-          _ => ZIO.fail(InvalidUrlException(url)), // potentially missing error info
+          _ => ZIO.fail(NonexistentUrlException(url)), // potentially missing error info
           text => ZIO.succeed(text)
         )
 

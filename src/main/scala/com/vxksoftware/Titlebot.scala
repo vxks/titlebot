@@ -1,6 +1,6 @@
 package com.vxksoftware
 
-import com.vxksoftware.model.{InvalidRequestException, InvalidUrlException, TitlebotRequest, TitlebotResponse}
+import com.vxksoftware.model.{InvalidRequestException, NonexistentUrlException, TitlebotRequest, TitlebotResponse}
 import com.vxksoftware.service.{Cache, TitleInfoFetcher}
 import zio.*
 import zio.http.*
@@ -21,29 +21,24 @@ object Titlebot extends ZIOAppDefault:
         Some(AccessControlAllowOrigin.Specific(origin))
       case _ => None
     },
-    allowedMethods = AccessControlAllowMethods(Method.POST)
+    allowedMethods = AccessControlAllowMethods(Method.GET)
   )
 
   val routes: Http[TitleInfoFetcher, Throwable, Request, Response] = Http.collectZIO[Request] {
-    case request @ Method.POST -> !! / "titlebot" / "url" =>
+    case request @ Method.GET -> !! / "titlebot" / "titleInfo" =>
       val titleInfo = for
-        string <- request.body.asString
-        json <- string
-                  .fromJson[TitlebotRequest]
-                  .fold(
-                    err =>
-                      Console.printLineError(s"Could not parse TitlebotRequest from request body: $err") *>
-                        ZIO.fail(InvalidRequestException),
-                    titlebotRequest => ZIO.succeed(titlebotRequest)
-                  )
+        url <- request.url.queryParams
+                 .get("url") match {
+                 case Some(Chunk(url)) => ZIO.attempt(new URL(url)).orElseFail(InvalidRequestException)
+                 case _                => ZIO.fail(InvalidRequestException)
+               }
         fetcher  <- ZIO.service[TitleInfoFetcher]
-        url       = json.url
         response <- fetcher.fetch(url)
       yield response
 
       titleInfo.map(info => Response.json(info.toJson)).catchSome {
-        case _: InvalidUrlException  => ZIO.succeed(Response.status(Status.NotFound))
-        case InvalidRequestException => ZIO.succeed(Response.status(Status.BadRequest))
+        case _: NonexistentUrlException => ZIO.succeed(Response.status(Status.NotFound))
+        case InvalidRequestException    => ZIO.succeed(Response.status(Status.BadRequest))
       }
   } @@ RequestHandlerMiddlewares.debug @@ cors(corsConfig)
 
@@ -55,6 +50,7 @@ object Titlebot extends ZIOAppDefault:
   val backendDev: ZIO[TitleInfoFetcher with Server, Throwable, Unit] = for
     _           <- Console.printLine("Starting development server on port 8080...")
     serverFiber <- Server.serve(routes.withDefaultErrorResponse).fork
+    _           <- Console.printLine("Development server started")
     _           <- Console.readLine
     _           <- Console.printLine("Shutting down server...")
     _           <- serverFiber.interrupt

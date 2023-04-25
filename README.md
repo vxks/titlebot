@@ -2,8 +2,11 @@
 
 ---
 #### To run:
-1. `sbt clean docker:stage`
+1. `sbt clean compile docker:stage`
 2. `docker-compose up`
+
+or to create an image manually:
+ - `sbt clean compile docker:publishLocal`
 
 #### To test:
 - `sbt test`
@@ -14,6 +17,7 @@
 - [x] caching
 - [ ] serve icons from backend
 - [ ] add more logging
+- [ ] client side URL validation
 
 ---
 #### Scratch

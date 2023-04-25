@@ -118,18 +118,14 @@ function Titlebot({ store }: TitlebotProps) {
   }
 
   function fetchTitleInfo(url) {
-    const data = {
-      url: url
-    };
-
     setIsLoading(true);
 
-    fetch("http://localhost:8080/titlebot/url", {
-      method: "POST",
+    fetch("http://localhost:8080/titlebot/titleInfo?url=" + encodeURIComponent(url), {
+      method: "GET",
+      mode: 'cors',
       headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(data)
+        "Access-Control-Allow-Origin": window.location.origin
+      }
     })
       .then(resp => {
         setIsLoading(false);
@@ -162,6 +158,16 @@ function Titlebot({ store }: TitlebotProps) {
       })
   }
 }
+
+function App() {
+  const store = new TitleInfoStore();
+
+  return (
+    <Titlebot store={store} />
+  );
+}
+
+export default App;
 
 const Styles = {
   wrapper: {
@@ -241,13 +247,3 @@ const Styles = {
     padding: "0px",
   }
 }
-
-function App() {
-  const store = new TitleInfoStore();
-
-  return (
-    <Titlebot store={store} />
-  );
-}
-
-export default App;

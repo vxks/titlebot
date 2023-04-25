@@ -1,4 +1,4 @@
-import com.vxksoftware.model.{InvalidUrlException, TitlebotRequest, TitlebotResponse}
+import com.vxksoftware.model.{NonexistentUrlException, TitlebotRequest, TitlebotResponse}
 import com.vxksoftware.Titlebot
 import com.vxksoftware.service.TitleInfoFetcher
 import io.netty.util.AsciiString
@@ -10,16 +10,16 @@ import zio.test.Assertion.*
 import zio.test.*
 
 object BackendSpec extends ZIOSpecDefault:
-  val url: URL = URL(!! / "url")
+  val url: URL = URL(!! / "titlebot" / "titleInfo").withQueryParams(QueryParams(Map("url" -> Chunk("https://cnn.com"))))
   val defaultRequest: Request = Request(
-    body = Body.fromString(TitlebotRequest(url = new java.net.URL("https://cnn.com")).toJson),
-    headers = Headers("Content-Type", "application/json"),
-    method = Method.POST,
+    body = Body.empty,
+    headers = Headers.empty,
+    method = Method.GET,
     url = url,
     version = Version.Http_1_1,
     remoteAddress = None
   )
-  
+
   val fetcherDummyLayer: ULayer[TitleInfoFetcher] = TitleInfoFetcher.test { url =>
     url.toString match {
       case "https://cnn.com" =>
@@ -30,8 +30,8 @@ object BackendSpec extends ZIOSpecDefault:
           )
         }
 
-      case "https://nonexistent.url/" => ZIO.fail(InvalidUrlException(new java.net.URL("https://nonexistent.url/")))
-      case _                          => ZIO.fail(new Exception("Unhandled URL"))
+      case "https://nonexistent.url" => ZIO.fail(NonexistentUrlException(new java.net.URL("https://nonexistent.url")))
+      case _url                      => ZIO.fail(new Exception(s"Unhandled URL: ${_url}"))
     }
   }
 
@@ -53,19 +53,21 @@ object BackendSpec extends ZIOSpecDefault:
     },
     test("invalid request should return 400") {
       for {
-        response <- Titlebot.routes.runZIO(defaultRequest.copy(body = Body.empty))
+        response <- Titlebot.routes.runZIO(defaultRequest.copy(url = url.copy(queryParams = QueryParams.empty)))
       } yield assertTrue(
         response.status == Status.BadRequest
       )
     },
     test("non-existent URL request should fail with 404") {
       for {
-        response <- Titlebot.routes.runZIO {
-                      defaultRequest.copy(
-                        body =
-                          Body.fromString(TitlebotRequest(url = new java.net.URL("https://nonexistent.url/")).toJson)
-                      )
-                    }
+        response <-
+          Titlebot.routes.runZIO {
+            defaultRequest.copy(
+              url = url.copy(queryParams =
+                QueryParams(Map("url" -> Chunk(new java.net.URL("https://nonexistent.url").toString)))
+              )
+            )
+          }
       } yield assertTrue(
         response.status == Status.NotFound
       )
