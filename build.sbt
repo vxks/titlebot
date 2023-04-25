@@ -25,5 +25,3 @@ Docker / daemonUser    := "daemon"
 // Docker
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
-
-//dockerEntrypoint := Seq("ls")

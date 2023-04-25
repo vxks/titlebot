@@ -32,8 +32,8 @@ object Titlebot extends ZIOAppDefault:
                   .fromJson[TitlebotRequest]
                   .fold(
                     err =>
-                      Console.printLineError(s"Could not parse TitlebotRequest from request body: $err") *> ZIO
-                        .fail(InvalidRequestException),
+                      Console.printLineError(s"Could not parse TitlebotRequest from request body: $err") *>
+                        ZIO.fail(InvalidRequestException),
                     titlebotRequest => ZIO.succeed(titlebotRequest)
                   )
         fetcher  <- ZIO.service[TitleInfoFetcher]
